@@ -1,11 +1,14 @@
 
 import requests
+import os
+import argparse
+
 from string import ascii_letters
 from time import sleep
 from random import choice, randint
-import argparse
 
-backend_url = ''
+
+backend_url: str = ''
 
 
 def worker():
@@ -14,12 +17,12 @@ def worker():
 
     sleep(randint(1, 5))
 
-    response = do_request("POST", backend_url + '/send-request', {'password': password['password'], "data": 0})
+    response = do_request("POST", backend_url + '/send-request', {'password': password['password']})
     print(f'got response: {response}')
 
     new_password = ''.join([choice(ascii_letters) for _ in range(4)])
-    response = do_request("PUT", backend_url + '/set-password', {'password': new_password})
-    print(f'set new password: {response}')
+    do_request("PUT", backend_url + '/set-password', {'password': new_password})
+    print(f'set new password: {new_password}')
 
 
 def do_request(method, url, data=None):
@@ -31,14 +34,16 @@ def do_request(method, url, data=None):
         response = requests.put(url, json=data)
     else:
         raise ValueError("Unknown method")
-    return response.json()
+
+    if response.status_code == 200:
+       return response.json()
 
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--backend_url', type=str, default='http://localhost:8000')
+    argparser.add_argument('--backend-url', type=str, default=None)
     args = argparser.parse_args()
-    backend_url = args.backend_url
+    backend_url = args.backend_url or os.getenv('BACKEND_URL') or ''
     while True:
         worker()
 
