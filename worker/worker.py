@@ -6,26 +6,40 @@ import argparse
 from string import ascii_letters
 from time import sleep
 from random import choice, randint
+from dotenv import load_dotenv
+from .mutex_abc import Mutex
+from .mutex_factory import MutexFactory
+
+
+NO_LOCK = 'no-lock'
+LOCK_MUTEX = 'mutex'
 
 
 backend_url: str = ''
+mutex_flag: bool = False
 
 
-def worker():
-    password = do_request("GET", backend_url + '/get-password')
+def worker(mutex: Mutex) -> None:
+
+    mutex.acquire()
+    password: dict = do_request("GET", backend_url + '/get-password')
+    sleep(randint(1, 3))
+    response: dict = do_request("POST", backend_url + '/send-request', {'password': password.get('password')})
+    mutex.release()
+
     print(f'got password: {password}')
-
-    sleep(randint(1, 5))
-
-    response = do_request("POST", backend_url + '/send-request', {'password': password['password']})
     print(f'got response: {response}')
 
-    new_password = ''.join([choice(ascii_letters) for _ in range(4)])
+    new_password: str = ''.join([choice(ascii_letters) for _ in range(4)])
+
+    mutex.acquire()
     do_request("PUT", backend_url + '/set-password', {'password': new_password})
+    mutex.release()
+
     print(f'set new password: {new_password}')
 
 
-def do_request(method, url, data=None):
+def do_request(method, url, data=None) -> dict:
     if method == "GET":
         response = requests.get(url)
     elif method == "POST":
@@ -36,14 +50,32 @@ def do_request(method, url, data=None):
         raise ValueError("Unknown method")
 
     if response.status_code == 200:
-       return response.json()
+        return response.json()
+    else:
+        return dict()
 
 
 if __name__ == '__main__':
+
+    load_dotenv()
+
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--backend-url', type=str, default=None)
+    argparser.add_argument('--lock', type=str, default=None)
     args = argparser.parse_args()
+
     backend_url = args.backend_url or os.getenv('BACKEND_URL') or ''
+    lock_name = args.lock or os.getenv('LOCK') or NO_LOCK
+
+    if lock_name == LOCK_MUTEX:
+        mutex = MutexFactory.create_redis_mutex(
+            host=os.getenv('REDIS_HOST') or 'localhost',
+            port=os.getenv('REDIS_PORT') or '6379',
+            db=os.getenv('REDIS_DB') or '0',
+        )
+    else:
+        mutex = MutexFactory.no_mutex()
+
     while True:
-        worker()
+        worker(mutex)
 

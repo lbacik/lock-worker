@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "worker"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Łukasz Bacik <mail@luka.sh>"]
 readme = "README.md"
@@ -9,6 +9,8 @@ readme = "README.md"
 python = "^3.11"
 requests = "^2.28.2"
 argparse = "^1.4.0"
+python-dotenv = "^1.0.0"
+redis = "^4.5.1"
 
 
 [build-system]
