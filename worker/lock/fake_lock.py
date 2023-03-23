@@ -1,8 +1,8 @@
 
-from ..mutex_abc import Mutex
+from ..lock_abc import Lock
 
 
-class NoMutex(Mutex):
+class FakeLock(Lock):
 
     def acquire(self) -> None:
         pass

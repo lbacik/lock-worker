@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class Mutex(ABC):
+class Lock(ABC):
 
     @abstractmethod
     def acquire(self) -> None:

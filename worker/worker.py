@@ -7,34 +7,30 @@ from string import ascii_letters
 from time import sleep
 from random import choice, randint
 from dotenv import load_dotenv
-from .mutex_abc import Mutex
-from .mutex_factory import MutexFactory
-
-
-NO_LOCK = 'no-lock'
-LOCK_MUTEX = 'mutex'
+from .lock_abc import Lock
+from .lock_factory import *
 
 
 backend_url: str = ''
 mutex_flag: bool = False
 
 
-def worker(mutex: Mutex) -> None:
+def worker(reader: Lock, writer: Lock) -> None:
 
-    mutex.acquire()
+    reader.acquire()
     password: dict = do_request("GET", backend_url + '/get-password')
     sleep(randint(1, 3))
     response: dict = do_request("POST", backend_url + '/send-request', {'password': password.get('password')})
-    mutex.release()
+    reader.release()
 
     print(f'got password: {password}')
     print(f'got response: {response}')
 
     new_password: str = ''.join([choice(ascii_letters) for _ in range(4)])
 
-    mutex.acquire()
+    writer.acquire()
     do_request("PUT", backend_url + '/set-password', {'password': new_password})
-    mutex.release()
+    writer.release()
 
     print(f'set new password: {new_password}')
 
@@ -67,15 +63,8 @@ if __name__ == '__main__':
     backend_url = args.backend_url or os.getenv('BACKEND_URL') or ''
     lock_name = args.lock or os.getenv('LOCK') or NO_LOCK
 
-    if lock_name == LOCK_MUTEX:
-        mutex = MutexFactory.create_redis_mutex(
-            host=os.getenv('REDIS_HOST') or 'localhost',
-            port=os.getenv('REDIS_PORT') or '6379',
-            db=os.getenv('REDIS_DB') or '0',
-        )
-    else:
-        mutex = MutexFactory.no_mutex()
+    [reader_lock, writer_lock] = LockFactory.create_read_write_lock(lock_name)
 
     while True:
-        worker(mutex)
+        worker(reader_lock, writer_lock)
 
