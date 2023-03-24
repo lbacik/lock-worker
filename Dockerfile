@@ -12,5 +12,5 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 RUN ~/.local/bin/poetry config virtualenvs.create false && \
     ~/.local/bin/poetry install --no-root --no-dev --no-interaction --no-ansi
 
-CMD [ "python", "-m", "worker.worker" ]
+CMD [ "python", "-u", "-m", "worker.worker" ]
 
