@@ -3,6 +3,7 @@ from .lock_abc import Lock
 from .lock.redis_mutex import RedisMutex
 from .lock.fake_lock import FakeLock
 from .lock.redis_reader_lock import RedisReaderLock
+from .lock.redis_writer_lock import RedisWriterLock
 from os import getenv
 from typing import List
 
@@ -15,8 +16,17 @@ LOCK_RW = 'rw'
 class LockFactory:
 
         @classmethod
-        def create_redis_mutex(cls, name: str, host: str, port: str, db: str) -> Lock:
-            return RedisMutex(name=name, host=host, port=int(port), db=int(db))
+        def create_redis_mutex(cls,
+                               name: str,
+                               host: str,
+                               port: str,
+                               db: str) -> Lock:
+            return RedisMutex(
+                name=name,
+                host=host,
+                port=int(port),
+                db=int(db),
+            )
 
         @classmethod
         def fake_lock(cls) -> Lock:
@@ -37,8 +47,7 @@ class LockFactory:
                 )
                 writer_lock: Lock = reader_lock
             elif lock_name == LOCK_RW:
-                writer_lock: Lock = cls.create_redis_mutex(
-                    name='lock_writer',
+                writer_lock: Lock = RedisWriterLock(
                     host=getenv('REDIS_HOST') or 'localhost',
                     port=getenv('REDIS_PORT') or '6379',
                     db=getenv('REDIS_DB') or '0',
