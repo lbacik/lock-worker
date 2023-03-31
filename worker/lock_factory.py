@@ -4,6 +4,7 @@ from .lock.redis_mutex import RedisMutex
 from .lock.fake_lock import FakeLock
 from .lock.redis_reader_lock import RedisReaderLock
 from .lock.redis_writer_lock import RedisWriterLock
+from .lock.redis_lock_ttl import RedisLockWithTtl
 from os import getenv
 from typing import List
 
@@ -49,8 +50,8 @@ class LockFactory:
             elif lock_name == LOCK_RW:
                 writer_lock: Lock = RedisWriterLock(
                     host=getenv('REDIS_HOST') or 'localhost',
-                    port=getenv('REDIS_PORT') or '6379',
-                    db=getenv('REDIS_DB') or '0',
+                    port=int(getenv('REDIS_PORT') or '6379'),
+                    db=int(getenv('REDIS_DB') or '0'),
                 )
                 reader_lock: Lock = cls.create_reader_lock(
                     name='lock_reader',
@@ -64,4 +65,14 @@ class LockFactory:
                 writer_lock: Lock = reader_lock
 
             return [reader_lock, writer_lock]
+
+        @classmethod
+        def create_lock_with_ttl(cls, lock: Lock, ttl: int) -> Lock:
+            return RedisLockWithTtl(
+                lock=lock,
+                ttl=ttl,
+                host=getenv('REDIS_HOST') or 'localhost',
+                port=int(getenv('REDIS_PORT') or '6379'),
+                db=int(getenv('REDIS_DB') or '0'),
+            )
 
