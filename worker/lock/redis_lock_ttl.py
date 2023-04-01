@@ -21,6 +21,9 @@ class RedisLockWithTtl(Lock):
     def acquire(self) -> None:
         if self._is_time_for_change():
             self.lock.acquire()
+            if self._is_time_for_change() is False:
+                self.lock.release()
+                raise Exception('Password already changed')
             self._reset_timer()
         else:
             raise Exception('Not time for change password')
