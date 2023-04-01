@@ -1,10 +1,10 @@
 import os
-import requests
 import argparse
 
 from dotenv import load_dotenv
 from .lock_factory import LockFactory, NO_LOCK
 from .worker import worker
+from .request import set_backend_url
 
 
 backend_url: str = ''
@@ -12,23 +12,6 @@ ttl: int = 0
 
 
 load_dotenv()
-
-
-def do_request(method: str, uri: str, data=None) -> dict:
-    url = backend_url + uri
-    if method == "GET":
-        response = requests.get(url)
-    elif method == "POST":
-        response = requests.post(url, json=data)
-    elif method == "PUT":
-        response = requests.put(url, json=data)
-    else:
-        raise ValueError("Unknown method")
-
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return dict()
 
 
 if __name__ == '__main__':
@@ -39,7 +22,11 @@ if __name__ == '__main__':
     args = argparser.parse_args()
 
     backend_url = args.backend_url or os.getenv('BACKEND_URL') or ''
+    set_backend_url(backend_url)
+
     lock_name = args.lock or os.getenv('LOCK') or NO_LOCK
+    print(f'lock: {lock_name}')
+
     ttl: int = int(args.ttl)
     if ttl == 0:
         new_ttl = os.getenv('TTL') or 0
@@ -48,6 +35,7 @@ if __name__ == '__main__':
 
     [reader_lock, writer_lock] = LockFactory.create_read_write_lock(lock_name)
     if ttl > 0:
+        print(f'create lock with ttl: {ttl}')
         writer_lock = LockFactory.create_lock_with_ttl(writer_lock, ttl)
 
     while True:
