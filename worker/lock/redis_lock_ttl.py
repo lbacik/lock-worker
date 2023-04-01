@@ -1,11 +1,13 @@
 from redis import Redis
 import time
 from ..lock_abc import Lock
+from ..lock.redis_mutex import RedisMutex
+
 
 class RedisLockWithTtl(Lock):
 
     def __init__(self,
-        lock: Lock,
+        lock: RedisMutex,
         ttl: int,
         host: str = 'localhost',
         port: int = 6379,
@@ -13,14 +15,18 @@ class RedisLockWithTtl(Lock):
         name: str = 'writer_ttl',
     ) -> None:
         self.redis: Redis[bytes] = Redis(host=host, port=port, db=db)
-        self.lock: Lock = lock
+        self.lock: RedisMutex = lock
         self.ttl: int = ttl
         self.name: str = name
         self.last_change_timer_value: int = 0
 
     def acquire(self) -> None:
         if self._is_time_for_change():
-            self.lock.acquire()
+            while self.lock.lock.acquire(blocking=True):
+                print(f'Waiting for lock {self.lock.name}...')
+                if self._is_time_for_change() is False:
+                    raise Exception('Password already changed')
+            print(f'Lock {self.lock.name} acquired')
             if self._is_time_for_change() is False:
                 self.lock.release()
                 raise Exception('Password already changed')

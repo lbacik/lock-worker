@@ -67,7 +67,7 @@ class LockFactory:
             return [reader_lock, writer_lock]
 
         @classmethod
-        def create_lock_with_ttl(cls, lock: Lock, ttl: int) -> Lock:
+        def create_lock_with_ttl(cls, lock: RedisMutex, ttl: int) -> Lock:
             return RedisLockWithTtl(
                 lock=lock,
                 ttl=ttl,

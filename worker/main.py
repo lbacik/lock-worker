@@ -3,6 +3,7 @@ import argparse
 
 from dotenv import load_dotenv
 from .lock_factory import LockFactory, NO_LOCK
+from .lock.redis_mutex import RedisMutex
 from .worker import worker
 from .request import set_backend_url
 
@@ -35,6 +36,8 @@ if __name__ == '__main__':
 
     [reader_lock, writer_lock] = LockFactory.create_read_write_lock(lock_name)
     if ttl > 0:
+        if not isinstance(writer_lock, RedisMutex):
+            raise Exception('ttl is only available for redis locks')
         print(f'create lock with ttl: {ttl}')
         writer_lock = LockFactory.create_lock_with_ttl(writer_lock, ttl)
 
