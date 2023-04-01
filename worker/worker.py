@@ -3,7 +3,8 @@ from time import sleep
 from random import choice, randint
 from .lock_abc import Lock
 from .lock_factory import *
-from .main import do_request
+from .lock.redis_lock_ttl import RedisLockWithTtl
+from .request import do_request
 
 
 def change_report(lock: Lock, new_password: str) -> None:
@@ -26,8 +27,11 @@ def worker(reader: Lock, writer: Lock) -> None:
 
     new_password: str = ''.join([choice(ascii_letters) for _ in range(4)])
 
-    writer.acquire()
-    do_request("PUT", '/set-password', {'password': new_password})
-    change_report(writer, new_password)
-    writer.release()
+    try:
+        writer.acquire()
+        do_request("PUT", '/set-password', {'password': new_password})
+        change_report(writer, new_password)
+        writer.release()
+    except Exception as e:
+        print(e)
 
